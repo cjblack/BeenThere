@@ -1,9 +1,11 @@
 import sys
 
+from PyQt6.QtMultimedia import QMediaPlayer
+from PyQt6.QtMultimediaWidgets import QVideoWidget
 #from PyQt5.QtWidgets import QAction
 from PyQt6.QtGui import * #QIcon, QAction
 from PyQt6.QtCore import *
-from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QFileDialog, QPushButton, QVBoxLayout, QMenuBar, QMainWindow, \
+from PyQt6.QtWidgets import QFormLayout, QSlider, QDockWidget, QApplication, QLabel, QWidget, QFileDialog, QPushButton, QVBoxLayout, QMenuBar, QMainWindow, \
     QTreeWidget, QTreeWidgetItem
 import FormatVideos as FVid
 import os
@@ -25,10 +27,52 @@ class MainWindow(QMainWindow):
         #widget1 = Window()
         #self.setFixedSize(400,300)
         #self.setCentralWidget(widget1)
+        self.setGeometry(100,100,1000,800)
         self.CreateMenuBar()
         self.folders_for_analysis = []
-        self.treeDicts = dict()
+        #self.treeDicts = dict()
         self.isCorrected = False
+        self.dock = QDockWidget('File Selector')
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.dock)
+        self.tree = QTreeWidget()
+        layout = QFormLayout(self.tree)
+        self.tree.setLayout(layout)
+        self.tree.setHeaderLabels(['Directory'])
+        self.dock.setWidget(self.tree)
+        self.tree.selectionModel().selectionChanged.connect(self.CurrentIndex)
+
+        vidLayout = QVBoxLayout()
+
+        self.vidPlayer = VideoPlayer()
+        self.startButton = QPushButton('Start')
+        self.startButton.clicked.connect(self.vidPlayer.PlayVideo)
+
+        self.pauseButton = QPushButton('Pause')
+        self.pauseButton.clicked.connect(self.vidPlayer.PauseVideo)
+        self.stopButton = QPushButton('Stop')
+        self.stopButton.clicked.connect(self.vidPlayer.StopVideo)
+        self.slider = QSlider(Qt.Orientation.Horizontal)
+        self.slider.sliderMoved.connect(self.vidPlayer.SetPosition)
+        self.vidPlayer.mediaPlayer.positionChanged.connect(self.PositionChanged)
+        self.vidPlayer.mediaPlayer.durationChanged.connect(self.DurationChanged)
+
+        vidLayout.addWidget(self.vidPlayer)
+        vidLayout.addWidget(self.startButton)
+        vidLayout.addWidget(self.pauseButton)
+        vidLayout.addWidget(self.stopButton)
+        vidLayout.addWidget(self.slider)
+
+        container = QWidget()
+        container.setLayout(vidLayout)
+        self.setCentralWidget(container)
+        self.show()
+        self.videoFormats = ['mp4', 'avi'] # add others...
+
+    def PositionChanged(self, position):
+        self.slider.setValue(position)
+    def DurationChanged(self, duration):
+        self.slider.setRange(0,duration)
+
     def CreateMenuBar(self):
         menuBar = QMenuBar(self)
         self.setMenuBar(menuBar)
@@ -52,6 +96,17 @@ class MainWindow(QMainWindow):
         clearFoldersAction.setStatusTip('Clear folders currently in memory')
         clearFoldersAction.triggered.connect(self.ClearIt)
         editMenu.addAction(clearFoldersAction)
+        filesSubMenu = editMenu.addMenu('&Files')
+
+        removeFilesAction = QAction('Remove', self)
+        removeFilesAction.setStatusTip('Remove marked files')
+        removeFilesAction.triggered.connect(self.RemoveFiles)
+        filesSubMenu.addAction(removeFilesAction)
+
+        selectFilesAction = QAction('Select', self)
+        selectFilesAction.setStatusTip('Select files for processing')
+        selectFilesAction.triggered.connect(self.ProcessFiles)
+        filesSubMenu.addAction(selectFilesAction)
 
         ## Analysis menu
         analysisMenu = menuBar.addMenu('&Analysis')
@@ -59,11 +114,49 @@ class MainWindow(QMainWindow):
 
         correctVideosAction = QAction('Correct Fisheye', self)
         correctVideosAction.setStatusTip('Corrects video for fisheye distortion')
-        correctVideosAction.triggered.connect(self.CorrectIt)
+        correctVideosAction.triggered.connect(self.CorrectIt2)
         videoSubMenu.addAction(correctVideosAction)
 
         ## Help menu
         helpMenu = menuBar.addMenu('&Help')
+
+    def RemoveFiles(self):
+        checked = dict()
+        root = self.tree.invisibleRootItem()
+        signal_count = root.childCount()
+        for i in range(signal_count):
+            signal = root.child(i)
+            checked_sweeps = list()
+            num_children = signal.childCount()
+            for n in range(num_children):
+                child = signal.child(n)
+                if child.checkState(0) == Qt.CheckState.Checked:
+                    checked_sweeps.append(child)
+
+            for child in checked_sweeps:
+                child.parent().removeChild(child)
+
+            #checked[signal.text(0)]=checked_sweeps
+        #print(checked)
+    def ProcessFiles(self):
+        self.analysisDict = dict()
+        self.parentDict = dict()
+        root = self.tree.invisibleRootItem()
+        signal_count = root.childCount()
+        for i in range(signal_count):
+            signal = root.child(i)
+            checked_sweeps = list()
+            num_children = signal.childCount()
+            for n in range(num_children):
+                child = signal.child(n)
+                if child.checkState(0) == Qt.CheckState.Checked:
+                    checked_sweeps.append(child.text(0))
+            self.analysisDict[signal.text(0)]=checked_sweeps
+            self.parentDict[signal.text(0)] = signal
+            print(signal)
+        print(self.analysisDict)
+        print(self.parentDict)
+
     def TestIt(self):
         print('Test it.')
     def CorrectIt(self):
@@ -72,22 +165,46 @@ class MainWindow(QMainWindow):
         :return:
         '''
         print('Correcting...')
+        self.ProcessFiles()
         self.corrected_file_dict = dict()
         if len(self.folders_for_analysis) != 0:
             for folder_ in self.folders_for_analysis:
                 os.chdir(folder_)
-                if len(glob.glob('been_here.json')) != 0:
-                    break
-                else:
-                    corrections_dict = FVid.LoadFishEyeCorrections()
-                    file_dict = FVid.SetupFiles(folder_)
-                    corrected_file_names = FVid.CorrectVideos(file_dict, corrections_dict)
-                    self.corrected_file_dict[folder_] = corrected_file_names
+                # if len(glob.glob('been_here.json')) != 0:
+                #     print('Just checking for now...')
+                #     #break
+                # else:
+                corrections_dict = FVid.LoadFishEyeCorrections()
+                file_dict = FVid.SetupFiles(folder_)
+                corrected_file_names = FVid.CorrectVideos(file_dict, corrections_dict)
+                self.corrected_file_dict[folder_] = corrected_file_names
         self.isCorrected = True
 
         return self.corrected_file_dict # dont actually need this since it is part of the class
 
-
+    def CorrectIt2(self):
+        '''
+        Check if folders have been corrected and then will correct the videos in them
+        :return:
+        '''
+        print('Correcting...')
+        self.ProcessFiles()
+        self.corrected_file_dict = dict()
+        if len(self.analysisDict) != 0:
+            for folder, videos in self.analysisDict.items():
+                os.chdir(folder)
+                # if len(glob.glob('been_here.json')) != 0:
+                #     print('Just checking for now...')
+                #     #break
+                # else:
+                corrections_dict = FVid.LoadFishEyeCorrections()
+                file_dict = FVid.SetupFiles(folder)
+                file_dict['videos'] = videos # monkey patch this for the moment
+                corrected_file_names = FVid.CorrectVideos(file_dict, corrections_dict)
+                self.corrected_file_dict[folder] = corrected_file_names
+        self.isCorrected = True
+        self.UpdateTreeParent()
+        return self.corrected_file_dict  # dont actually need this since it is part of the class
     def SCPIt(self):
         '''
         This will eventually SCP files to a specific location on a remote server.
@@ -105,6 +222,7 @@ class MainWindow(QMainWindow):
 
         :return:
         '''
+        self.treeDicts = dict()
         self.dialog = QFileDialog()
         folder = self.dialog.getExistingDirectory(None, 'Select a folder')
         print(folder)
@@ -115,7 +233,7 @@ class MainWindow(QMainWindow):
                 fileStore.append(file)
         self.treeDicts[folder] = fileStore.copy()
         fileStore.clear()
-        self.MakeTree()
+        self.UpdateTree()
 
     def PrintIt(self):
         '''
@@ -130,7 +248,7 @@ class MainWindow(QMainWindow):
         '''
         self.folders_for_analysis = []
     def MakeTree(self):
-        self.tree = QTreeWidget()
+        #self.tree = QTreeWidget()
 
         for key,values in self.treeDicts.items():
             item = QTreeWidgetItem([key])
@@ -140,10 +258,67 @@ class MainWindow(QMainWindow):
                 child.setCheckState(0,Qt.CheckState.Unchecked)
                 item.addChild(child)
             self.tree.addTopLevelItem(item)
-        self.tree.show()
-        self.setCentralWidget(self.tree)
+        #self.tree.show()
+        #self.setCentralWidget(self.tree)
 
-        self.tree.selectionModel().selectionChanged.connect(self.TestIt)
+        self.tree.selectionModel().selectionChanged.connect(self.CurrentIndex)
+    def UpdateTree(self):
+        #self.tree = QTreeWidget()
+
+        for key,values in self.treeDicts.items():
+            item = QTreeWidgetItem([key])
+            item.setCheckState(0,Qt.CheckState.Unchecked)
+            for value in values:
+                child = QTreeWidgetItem([value])
+                child.setCheckState(0,Qt.CheckState.Unchecked)
+                item.addChild(child)
+            self.tree.addTopLevelItem(item)
+
+    def UpdateTreeParent(self):
+        for key, values in self.corrected_file_dict.items():
+
+            parent = self.parentDict[key]
+            print(parent)
+            for value in values:
+                child = QTreeWidgetItem([value])
+                child.setCheckState(0, Qt.CheckState.Unchecked)
+                parent.insertChild(0,child)
+                #parent.addChild(child)
+                #print('Adding {}'.format(value))
+            #self.tree.addTopLevelItem(parent)
+
+    def CurrentIndex(self):
+        parent = self.tree.selectionModel().currentIndex().parent().data()
+        child = self.tree.selectionModel().currentIndex().data()
+        if type(parent) == str and type(child) == str:
+            path = parent+'/'+child
+            print('Location is {}'.format(parent))
+            print('Video is {} '.format(child))
+            if child.split('.')[-1] in self.videoFormats:
+                self.vidPlayer.SetSource(path)
+                self.vidPlayer.PlayVideo()
+            else:
+                print('Please select a video')
+        else:
+            print('Not a valid selection')
+class VideoPlayer(QVideoWidget):
+    def __init__(self):
+        super().__init__()
+        self.mediaPlayer = QMediaPlayer()
+
+    def SetSource(self, source):
+        self.mediaPlayer.setSource(QUrl.fromLocalFile(source))
+        self.mediaPlayer.setVideoOutput(self)
+
+    def PlayVideo(self):
+        self.mediaPlayer.play()
+    def StopVideo(self):
+        self.mediaPlayer.stop()
+    def PauseVideo(self):
+        self.mediaPlayer.pause()
+    def SetPosition(self, position):
+        self.mediaPlayer.setPosition(position)
+
 
 
 class Tree(QTreeWidget):
@@ -233,13 +408,14 @@ class Window(QWidget):
         if len(self.folders_for_analysis) != 0:
             for folder_ in self.folders_for_analysis:
                 os.chdir(folder_)
-                if len(glob.glob('been_here.json')) != 0:
-                    break
-                else:
-                    corrections_dict = FVid.LoadFishEyeCorrections()
-                    file_dict = FVid.SetupFiles(folder_)
-                    corrected_file_names = FVid.CorrectVideos(file_dict, corrections_dict)
-                    self.corrected_file_dict[folder_] = corrected_file_names
+                # if len(glob.glob('been_here.json')) != 0:
+                #     print('This folder has been visited already...')
+                #     #break
+                # else:
+                corrections_dict = FVid.LoadFishEyeCorrections()
+                file_dict = FVid.SetupFiles(folder_)
+                corrected_file_names = FVid.CorrectVideos(file_dict, corrections_dict)
+                self.corrected_file_dict[folder_] = corrected_file_names
         self.isCorrected = True
         return self.corrected_file_dict # dont actually need this since it is part of the class
 

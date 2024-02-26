@@ -18,12 +18,21 @@ def SetupFiles(directory_:str)->dict:
 
     os.chdir(directory_)
     file_dict['directory'] = directory_
-    file_dict['file_date'] = directory_.split('/')[-1]
-    file_dict['subject_id'] = directory_.split('/')[4]
-    file_dict['cage_id'] = directory_.split('/')[3]
-    file_dict['strain_id'] = directory_.split('/')[2]
-    file_dict['experiment_type'] = directory_.split('/')[5]
-    file_dict['videos'] = glob.glob('*.avi')
+    direct_split = directory_.split('/')
+    if len(direct_split) >= 4:
+        file_dict['file_date'] = directory_.split('/')[-1]
+        file_dict['subject_id'] = directory_.split('/')[4]
+        file_dict['cage_id'] = directory_.split('/')[3]
+        file_dict['strain_id'] = directory_.split('/')[2]
+        file_dict['experiment_type'] = directory_.split('/')[5]
+        file_dict['videos'] = glob.glob('*.avi')
+    else:
+        file_dict['file_date'] = str(datetime.datetime.now()).split(' ')[0]
+        file_dict['subject_id'] = ''
+        file_dict['cage_id'] = ''
+        file_dict['strain_id'] = ''
+        file_dict['experiment_type'] = ''
+        file_dict['videos'] = glob.glob('*.avi')
     return file_dict
 
 def CorrectVideos(file_dict: dict, corrections_dict:dict):

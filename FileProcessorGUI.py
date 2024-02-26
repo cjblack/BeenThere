@@ -139,6 +139,10 @@ class MainWindow(QMainWindow):
             #checked[signal.text(0)]=checked_sweeps
         #print(checked)
     def ProcessFiles(self):
+        '''
+        Get id's of files selected in folder view
+        :return:
+        '''
         self.analysisDict = dict()
         self.parentDict = dict()
         root = self.tree.invisibleRootItem()
@@ -210,13 +214,19 @@ class MainWindow(QMainWindow):
         This will eventually SCP files to a specific location on a remote server.
         :return:
         '''
-        if self.isCorrected == True:
-            for folder in self.corrected_file_dict:
-                for file_ in self.corrected_file_dict[folder]:
-                    fname = folder+'/'+file_
+        self.ProcessFiles()
+        if len(self.analysisDict) != 0:
+            for folder, videos in self.analysisDict.items():
+                for video in videos:
+                    fname = folder+'/'+video
                     print('Running SCP for {}'.format(fname))
-                    tfiles.SCPToServer(fname,'C:/Users/chris/BeenThere/sendoff.json')
-        print('I dont do anything yet.')
+                    tfiles.SCPToServer(fname, 'C:/Users/chris/BeenThere/sendoff.json')
+        #if self.isCorrected == True:
+            #for folder in self.corrected_file_dict:
+                #for file_ in self.corrected_file_dict[folder]:
+                    #fname = folder+'/'+file_
+                    #print('Running SCP for {}'.format(fname))
+                    #tfiles.SCPToServer(fname,'C:/Users/chris/BeenThere/sendoff.json')
     def OpenDialog(self):
         '''
 

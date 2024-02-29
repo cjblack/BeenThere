@@ -1,6 +1,6 @@
 import sys
 
-from PyQt6.QtMultimedia import QMediaPlayer
+from PyQt6.QtMultimedia import QMediaPlayer, QVideoFrame
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 #from PyQt5.QtWidgets import QAction
 from PyQt6.QtGui import * #QIcon, QAction
@@ -319,6 +319,7 @@ class VideoPlayer(QVideoWidget):
     def SetSource(self, source):
         self.mediaPlayer.setSource(QUrl.fromLocalFile(source))
         self.mediaPlayer.setVideoOutput(self)
+        self.currentVideo = source
 
     def PlayVideo(self):
         self.mediaPlayer.play()
@@ -326,9 +327,14 @@ class VideoPlayer(QVideoWidget):
         self.mediaPlayer.stop()
     def PauseVideo(self):
         self.mediaPlayer.pause()
+
     def SetPosition(self, position):
         self.mediaPlayer.setPosition(position)
 
+class FrameGrabber(QVideoFrame):
+    def __init__(self):
+        super().__init__()
+        print('nothing')
 
 
 class Tree(QTreeWidget):

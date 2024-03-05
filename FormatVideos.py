@@ -35,7 +35,7 @@ def SetupFiles(directory_:str)->dict:
         file_dict['videos'] = glob.glob('*.avi')
     return file_dict
 
-def CorrectVideos(file_dict: dict, corrections_dict:dict):
+def CorrectVideos(file_dict: dict, corrections_dict:dict, cropFrame=True):
     processing_type = 'FishEyeCorrection'
     videos = file_dict['videos']
     corrected_videos = []
@@ -54,8 +54,10 @@ def CorrectVideos(file_dict: dict, corrections_dict:dict):
         video_name = subject_id+'_'+experiment_type+'_'+file_date+'_T'+v.split('_')[-1]
         corrected_videos.append(video_name)
         fourcc = cv2.VideoWriter_fourcc('F', 'M', 'P', '4')
-        video = cv2.VideoWriter(video_name, fourcc, fps_,
-                                (700, 1080))
+        if cropFrame == True:
+            video = cv2.VideoWriter(video_name,fourcc,fps_,(320,1080))
+        else:
+            video = cv2.VideoWriter(video_name, fourcc, fps_,(700, 1080))
         ret = True
         while ret:
             ret, frame = orig_vid.read()
@@ -63,6 +65,9 @@ def CorrectVideos(file_dict: dict, corrections_dict:dict):
                 h,w = frame.shape[:2]
                 map1, map2 = cv2.fisheye.initUndistortRectifyMap(K,D,np.eye(3),K,DIM, cv2.CV_16SC2)
                 corr_frame = cv2.remap(frame, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+                if cropFrame == True:
+                    corr_frame = corr_frame[:,205:525]
+
                 video.write(corr_frame)
         video.release()
         orig_vid.release()

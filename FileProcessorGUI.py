@@ -117,6 +117,11 @@ class MainWindow(QMainWindow):
         correctVideosAction.triggered.connect(self.CorrectIt2)
         videoSubMenu.addAction(correctVideosAction)
 
+        rotateVideosAction = QAction('Rotate Video', self)
+        rotateVideosAction.setStatusTip('Rotates video 90 degrees clockwise')
+        rotateVideosAction.triggered.connect(self.RotateIt)
+        videoSubMenu.addAction(rotateVideosAction)
+
         ## Help menu
         helpMenu = menuBar.addMenu('&Help')
 
@@ -209,6 +214,19 @@ class MainWindow(QMainWindow):
         self.isCorrected = True
         self.UpdateTreeParent()
         return self.corrected_file_dict  # dont actually need this since it is part of the class
+
+    def RotateIt(self):
+        '''
+
+        :return:
+        '''
+        print('Rotating...')
+        self.ProcessFiles()
+        self.corrected_file_dict = dict()
+        if len(self.analysisDict) != 0:
+            for folder, videos in self.analysisDict.items():
+                os.chdir(folder)
+
     def SCPIt(self):
         '''
         This will eventually SCP files to a specific location on a remote server.

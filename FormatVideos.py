@@ -6,12 +6,17 @@ import os
 import glob
 import datetime
 import json
+from PyQt6.QtWidgets import QFileDialog
 
 def LoadFishEyeCorrections()->dict:
+    # The next two lines will allow you to select which calibration files to run with the correction...might change in future
+    dialog = QFileDialog()
+    folder = dialog.getExistingDirectory(None, 'Select directory containing Correction Files')
+    #folder = 'C:/Users/chris/BeenThere/FishEyeCorrections/20240318_BLAB'
     corrections_dict = dict()
-    corrections_dict['K'] = np.load('C:/Users/chris/BeenThere/K.npy')
-    corrections_dict['D'] = np.load('C:/Users/chris/BeenThere/D.npy')
-    corrections_dict['DIM'] = np.load('C:/Users/chris/BeenThere/DIM.npy')
+    corrections_dict['K'] = np.load(folder+'/K.npy')
+    corrections_dict['D'] = np.load(folder+'/D.npy')
+    corrections_dict['DIM'] = np.load(folder+'/DIM.npy')
     return corrections_dict
 def SetupFiles(directory_:str)->dict:
     file_dict = dict()
@@ -35,7 +40,7 @@ def SetupFiles(directory_:str)->dict:
         file_dict['videos'] = glob.glob('*.avi')
     return file_dict
 
-def CorrectVideos(file_dict: dict, corrections_dict:dict, cropFrame=True):
+def CorrectVideos(file_dict: dict, corrections_dict:dict, rotateFrame=True, cropFrame=False):
     processing_type = 'FishEyeCorrection'
     videos = file_dict['videos']
     corrected_videos = []
@@ -57,10 +62,12 @@ def CorrectVideos(file_dict: dict, corrections_dict:dict, cropFrame=True):
         if cropFrame == True:
             video = cv2.VideoWriter(video_name,fourcc,fps_,(320,1080))
         else:
-            video = cv2.VideoWriter(video_name, fourcc, fps_,(700, 1080))
+            video = cv2.VideoWriter(video_name, fourcc, fps_,(600,1440))
         ret = True
         while ret:
             ret, frame = orig_vid.read()
+            if rotateFrame == True:
+                frame = cv2.rotate(frame,cv2.ROTATE_90_CLOCKWISE)
             if ret == True:
                 h,w = frame.shape[:2]
                 map1, map2 = cv2.fisheye.initUndistortRectifyMap(K,D,np.eye(3),K,DIM, cv2.CV_16SC2)

@@ -199,6 +199,7 @@ class MainWindow(QMainWindow):
         print('Correcting...')
         self.ProcessFiles()
         self.corrected_file_dict = dict()
+        corrections_dict = FVid.LoadFishEyeCorrections()
         if len(self.analysisDict) != 0:
             for folder, videos in self.analysisDict.items():
                 os.chdir(folder)
@@ -206,7 +207,6 @@ class MainWindow(QMainWindow):
                 #     print('Just checking for now...')
                 #     #break
                 # else:
-                corrections_dict = FVid.LoadFishEyeCorrections()
                 file_dict = FVid.SetupFiles(folder)
                 file_dict['videos'] = videos # monkey patch this for the moment
                 corrected_file_names = FVid.CorrectVideos(file_dict, corrections_dict)

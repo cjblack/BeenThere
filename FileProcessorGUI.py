@@ -15,6 +15,7 @@ import cv2
 import numpy as np
 import json
 import subprocess
+from datetime import datetime
 import TransferFiles as tfiles
 import glob
 
@@ -233,12 +234,35 @@ class MainWindow(QMainWindow):
         :return:
         '''
         self.ProcessFiles()
+        now_ = datetime.now()
+        prefix_='C:/Behavior/'
+        now_str = now_.strftime("%Y%m%d-%H-%M-%S")
+        param_file_name = prefix_+now_str+'_vfa.txt'
+        json_file_name = prefix_+now_str+'_vfa.json'
+        param_dict = dict()
         if len(self.analysisDict) != 0:
+            files_to_send = list()
             for folder, videos in self.analysisDict.items():
                 for video in videos:
+                    files_to_send.append(video)
                     fname = folder+'/'+video
                     print('Running SCP for {}'.format(fname))
                     tfiles.SCPToServer(fname, 'C:/Users/chris/BeenThere/sendoff.json')
+            len_files_to_send = str(len(files_to_send))
+            # Create param file to store video files for array analysis on computing cluster
+            f = open(param_file_name,'w')
+            f.write(len_files_to_send+'\n')
+            for file in files_to_send:
+                f.write(file+'\n')
+            f.close()
+            tfiles.SCPToServer(param_file_name, 'C:/Users/chris/BeenThere/sendoff.json')
+            param_dict['count'] = len_files_to_send
+            param_dict['files'] = files_to_send
+            json_f = open(json_file_name,'w')
+            json.dump(param_dict,json_f)
+            json_f.close()
+            tfiles.SCPToServer(json_file_name, 'C:/Users/chris/BeenThere/sendoff.json')
+
         #if self.isCorrected == True:
             #for folder in self.corrected_file_dict:
                 #for file_ in self.corrected_file_dict[folder]:

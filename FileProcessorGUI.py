@@ -112,11 +112,17 @@ class MainWindow(QMainWindow):
         ## Analysis menu
         analysisMenu = menuBar.addMenu('&Analysis')
         videoSubMenu = analysisMenu.addMenu('&Video')
+        fileSubMenu = analysisMenu.addMenu('&Make Files')
 
         correctVideosAction = QAction('Correct Fisheye', self)
         correctVideosAction.setStatusTip('Corrects video for fisheye distortion')
         correctVideosAction.triggered.connect(self.CorrectIt2)
         videoSubMenu.addAction(correctVideosAction)
+
+        createParamFileAction = QAction('Create Param File', self)
+        createParamFileAction.setStatusTip('Creates a param file for processing many videos')
+        createParamFileAction.triggered.connect(self.CreateParam)
+        fileSubMenu.addAction(createParamFileAction)
 
         rotateVideosAction = QAction('Rotate Video', self)
         rotateVideosAction.setStatusTip('Rotates video 90 degrees clockwise')
@@ -215,6 +221,30 @@ class MainWindow(QMainWindow):
         self.isCorrected = True
         self.UpdateTreeParent()
         return self.corrected_file_dict  # dont actually need this since it is part of the class
+    def CreateParam(self):
+        self.ProcessFiles()
+        now_ = datetime.now()
+        prefix_ = 'C:/Behavior/'
+        now_str = now_.strftime("%Y%m%d-%H-%M-%S")
+        param_file_name = prefix_ + now_str + '_vfa.txt'
+        json_file_name = prefix_ + now_str + '_vfa.json'
+        param_dict = dict()
+        if len(self.analysisDict) != 0:
+            files_to_send = list()
+            for folder, videos in self.analysisDict.items():
+                for video in videos:
+                    files_to_send.append(video)
+                    # fname = folder + '/' + video
+                    # print('Running SCP for {}'.format(fname))
+                    # tfiles.SCPToServer(fname, 'C:/Users/chris/BeenThere/sendoff.json')
+            len_files_to_send = str(len(files_to_send))
+            # Create param file to store video files for array analysis on computing cluster
+            param_dict['count'] = len_files_to_send
+            param_dict['files'] = files_to_send
+            json_f = open(json_file_name, 'w')
+            json.dump(param_dict, json_f)
+            json_f.close()
+            tfiles.SCPToServer(json_file_name, 'C:/Users/chris/BeenThere/sendoff.json')
 
     def RotateIt(self):
         '''

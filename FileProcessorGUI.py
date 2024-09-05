@@ -109,6 +109,11 @@ class MainWindow(QMainWindow):
         selectFilesAction.triggered.connect(self.ProcessFiles)
         filesSubMenu.addAction(selectFilesAction)
 
+        renameFilesAction = QAction('Rename', self)
+        renameFilesAction.setStatusTip('Renames selected files')
+        renameFilesAction.triggered.connect(self.rename_files)
+        filesSubMenu.addAction(renameFilesAction)
+
         ## Analysis menu
         analysisMenu = menuBar.addMenu('&Analysis')
         videoSubMenu = analysisMenu.addMenu('&Video')
@@ -221,6 +226,18 @@ class MainWindow(QMainWindow):
         self.isCorrected = True
         self.UpdateTreeParent()
         return self.corrected_file_dict  # dont actually need this since it is part of the class
+    def rename_files(self):
+        print('Renaming files...')
+        self.ProcessFiles()
+        if len(self.analysisDict) != 0:
+            for folder, videos in self.analysisDict.items():
+                os.chdir(folder)
+                file_dict = FVid.SetupFiles(folder)
+                file_dict['videos'] = videos
+                corrected_file_names = FVid.RenameFiles(file_dict)
+                self.corrected_file_dict[folder] = corrected_file_names
+        self.UpdateTreeParent()
+        return self.corrected_file_dict
     def CreateParam(self):
         self.ProcessFiles()
         now_ = datetime.now()

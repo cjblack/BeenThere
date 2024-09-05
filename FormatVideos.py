@@ -39,6 +39,19 @@ def SetupFiles(directory_:str)->dict:
         file_dict['experiment_type'] = ''
         file_dict['videos'] = glob.glob('*.avi')
     return file_dict
+def RenameFiles(file_dict: dict):
+    corrected_videos = []
+
+    videos = file_dict['videos']
+    subject_id = file_dict['subject_id']
+    experiment_type = file_dict['experiment_type']
+    file_date = file_dict['file_date']
+
+    for v in videos:
+        video_name = subject_id + '_' + experiment_type + '_' + file_date + '_BE' +v.split('_')[-1]
+        os.rename(v,video_name)
+        corrected_videos.append(video_name)
+    return corrected_videos
 
 def CorrectVideos(file_dict: dict, corrections_dict:dict, rotateFrame=True, cropFrame=False):
     processing_type = 'FishEyeCorrection'

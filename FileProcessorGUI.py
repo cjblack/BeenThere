@@ -24,7 +24,8 @@ import glob
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('Been There.')
+        self.setWindowTitle('Rewinder')
+        self.setWindowIcon(QIcon('Logo/RewinderLogo_basic.png')) # maybe remove...
         #widget1 = Window()
         #self.setFixedSize(400,300)
         #self.setCentralWidget(widget1)
@@ -77,7 +78,6 @@ class MainWindow(QMainWindow):
     def CreateMenuBar(self):
         menuBar = QMenuBar(self)
         self.setMenuBar(menuBar)
-
         ## File menu
         fileMenu = menuBar.addMenu('&File')
         selectFoldersAction = QAction('&Select Folders', self)
